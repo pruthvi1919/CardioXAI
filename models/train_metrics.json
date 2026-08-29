@@ -1,0 +1,66 @@
+{
+  "mode": "real",
+  "records": [
+    "100",
+    "101",
+    "106",
+    "119",
+    "200",
+    "201",
+    "203",
+    "208",
+    "210",
+    "213",
+    "215",
+    "219",
+    "221",
+    "223",
+    "233"
+  ],
+  "dataset": {
+    "total_beats": 37047,
+    "pvc_count": 5767,
+    "normal_count": 31280
+  },
+  "classification_report": {
+    "Normal": {
+      "precision": 1.0,
+      "recall": 0.99,
+      "f1-score": 1.0,
+      "support": 6257
+    },
+    "PVC": {
+      "precision": 0.97,
+      "recall": 0.99,
+      "f1-score": 0.98,
+      "support": 1153
+    },
+    "accuracy": 0.99,
+    "macro avg": {
+      "precision": 0.99,
+      "recall": 0.99,
+      "f1-score": 0.99,
+      "support": 7410
+    },
+    "weighted avg": {
+      "precision": 0.99,
+      "recall": 0.99,
+      "f1-score": 0.99,
+      "support": 7410
+    }
+  },
+  "confusion_matrix": [
+    [
+      6225,
+      32
+    ],
+    [
+      15,
+      1138
+    ]
+  ],
+  "confusion_matrix_labels": [
+    "Normal",
+    "PVC"
+  ]
+}

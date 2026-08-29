@@ -1,0 +1,7 @@
+numpy
+scipy
+matplotlib
+opencv-python-headless
+scikit-learn
+tensorflow
+wfdb
