@@ -1,4 +1,4 @@
-# ECG PVC Detection — Computer Vision + Deep Learning + Explainable AI
+# ECG PVC Detection - Computer Vision + Deep Learning + Explainable AI
 
 Detects **Premature Ventricular Contractions (PVC)** from ECG images using a
 computer vision digitization stage, a 1D CNN classifier trained on real
@@ -13,7 +13,7 @@ multi-beat rhythm strips, with a Streamlit web interface for live demo use.
 
 ## Architecture
 
-![Pipeline Architecture](pvc_pipeline_diagram_v2.png)
+![Pipeline Architecture](pvc_pipeline_professional.png)
 
 | Stage | What happens |
 |---|---|
