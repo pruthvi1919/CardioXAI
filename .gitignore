@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+data/mitdb/
+data/ecg_images/
+.streamlit/
