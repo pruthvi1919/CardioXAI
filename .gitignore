@@ -1,5 +1,8 @@
-__pycache__/
-*.pyc
-data/mitdb/
-data/ecg_images/
-.streamlit/
+   __pycache__/
+   *.pyc
+   .venv/
+   venv/
+   .ipynb_checkpoints/
+   .DS_Store
+   mlruns/
+   data/mitdb/
