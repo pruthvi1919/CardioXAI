@@ -5,3 +5,7 @@ opencv-python-headless
 scikit-learn
 tensorflow
 wfdb
+streamlit
+pillow
+reportlab
+requests

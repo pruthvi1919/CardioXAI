@@ -1,173 +1,230 @@
-# ECG PVC Detection — Computer Vision + Deep Learning + Explainable AI
+# CardioXAI: Deep Learning & Explainable AI for ECG Arrhythmia Classification
 
-Detects **Premature Ventricular Contractions (PVC)** from ECG images using a
-computer vision digitization stage, a 1D CNN classifier trained on real
-MIT-BIH data, and a dual-layer explainability system (Grad-CAM + rule-based
-clinical reasoning). Supports both single isolated beats and continuous
-multi-beat rhythm strips, with a Streamlit web interface for live demo use.
+CardioXAI reads an **ECG image** (a scan, screenshot or photo of a rhythm strip), digitizes the trace
+with computer vision, classifies every heartbeat with 1D CNNs trained on real MIT-BIH data, and
+**explains each call** with Grad-CAM saliency plus rule-based clinical reasoning (P wave, QRS width,
+T wave). It also reports rhythm statistics (heart rate, HRV, ectopic patterns) and exports a PDF report.
 
-**Pipeline:**
-`ECG image → CV digitization → 1D CNN classification → Explainable AI → highlighted output + explanation`
+The project started as a PVC (Premature Ventricular Contraction) detector and has grown into a
+multi-class arrhythmia analysis tool. The original PVC-only pipeline is still included (`app.py`).
 
----
-
-## Architecture
-
-![Pipeline Architecture](pvc_pipeline_diagram_v2.png)
-
-| Stage | What happens |
-|---|---|
-| **1. ECG Image Input** | Single-beat image, or a multi-beat strip (e.g. a Lead II rhythm strip) |
-| **2. Computer Vision** | Grayscale conversion → grid removal (HSV thresholding) → trace digitization → R-peak detection (multi-beat only) |
-| **3. ML Model** | 1D CNN (TensorFlow/Keras), binary classification → PVC / Normal + probability |
-| **4. Explainable AI** | Grad-CAM saliency (which part of the signal the CNN attended to) + rule-based clinical checks (P wave, QRS width, T wave polarity) |
-| **5. Results & Interface** | Highlighted output image, plain-English clinical explanation, Streamlit UI |
+> Research / educational project. **Not a medical device** and not for diagnosis.
 
 ---
 
-## Results (real MIT-BIH data, held-out test set)
+## Pipeline
 
-Trained on **37,047 beats** from 15 MIT-BIH records (5,767 PVC / 31,280 Normal).
+![Original PVC pipeline](pvc_pipeline_professional.png)
 
-| Class | Precision | Recall | F1-score | Support |
+The current multi-class pipeline (`src/arrhythmia_pipeline.py`, used by `app_pro.py`):
+
+```
+ECG image
+  -> paper auto-crop + grid calibration (pixels per second)       cv_unet/paper_crop.py, grid_calibration.py
+  -> U-Net trace segmentation -> 1-D signal at 360 Hz             cv_unet/digitize_unet.py
+  -> R-peak detection                                             beat_detect.py
+  -> per-beat 1D CNN + R-R interval features -> N / S / V / Uncertain
+  -> Grad-CAM (predicted class) + rule-based reasons              xai_explain.py
+  -> rhythm analytics (heart rate, couplets, runs, bigeminy ...)  rhythm_analytics.py
+  -> annotated image + PDF report                                 report_pdf.py
+```
+
+Beat classes follow the AAMI standard: **N** normal, **S** supraventricular ectopic (PAC-type),
+**V** ventricular ectopic (PVC), **F** fusion. Beats below a confidence threshold are shown as
+"Uncertain" instead of being forced into a class.
+
+Two modes are chosen automatically:
+- **Calibrated**: a real ECG paper grid is found, so time is known in seconds and R-R based
+  statements (heart rate, rhythm patterns) are made.
+- **Shape-only**: no usable grid (for example images from `ecg_image_gen.py`). Time is unknown, so
+  R-R statements are skipped and each beat is classified Normal vs PVC by the original binary CNN.
+
+---
+
+## Results (real MIT-BIH data, test patients never used for training)
+
+Evaluation is **inter-patient** (train on DS1 patients, test on DS2 patients), so no patient appears
+in both sets. Beats and labels are real MIT-BIH annotations.
+
+| Model | Input | PVC recall | Accuracy | Normal recall |
 |---|---|---|---|---|
-| Normal | 1.00 | 0.99 | 1.00 | 6,257 |
-| **PVC** | **0.97** | **0.99** | **0.98** | 1,153 |
+| CNN + R-R, 4-class | Raw MIT-BIH signals (49,690 test beats) | **95.9%** | **94.7%** | **97.8%** |
+| CNN + R-R, 4-class (the model `app_pro.py` runs) | Rendered ECG images of real beats (6,724 test beats) | 83.0% | 78.4% | 84.2% |
+| Original binary PVC detector | Raw signals, random beat-wise split* | 98.7% | 99.4% | 99.5% |
 
-**Confusion matrix:**
-|  | Predicted Normal | Predicted PVC |
+\*The original detector was evaluated on a random beat-wise split, where beats from the same patient
+can appear in both training and test sets. Treat that row as optimistic; the two inter-patient rows
+are the fair comparison. Images in the second row are **synthetic renderings** of real beats, not
+photographs.
+
+Per-class details and confusion matrices are in `models/*_metrics.json` and `models/*_confusion.png`.
+
+### Computer vision: U-Net vs classical digitizer
+Correlation of the recovered trace with the ground-truth trace (60 **synthetic** test images per
+condition, real MIT-BIH test beats). Source: `models/cv_eval.md`.
+
+| Condition | Classical (HSV threshold) | U-Net |
 |---|---|---|
-| **Actual Normal** | 6225 | 32 |
-| **Actual PVC** | 15 | 1138 |
+| clean | 0.754 | 0.999 |
+| noisy | 0.787 | 0.999 |
+| tilted | 0.804 | 0.998 |
+| shadow | 0.784 | 0.999 |
+| clutter | 0.433 | 0.998 |
+| hard | 0.476 | 0.997 |
 
-For a medical detection task, **recall on the positive class (PVC) matters
-more than raw accuracy** — missing a real PVC (false negative) is worse than
-a false alarm (false positive). This model catches 99% of real PVC beats in
-the test set.
+### Model comparison (3 seeds, inter-patient test)
+Source: `models/benchmark_table.md`.
+
+| Model | Accuracy | PVC (V) sensitivity | PVC (V) precision |
+|---|---|---|---|
+| Random Forest | 0.912 | 0.853 | 0.949 |
+| SVM (RBF) | 0.853 | 0.945 | 0.732 |
+| 1D-CNN (signal only) | 0.873 | 0.869 | 0.715 |
+| **1D-CNN + R-R (ours)** | 0.924 | 0.948 | 0.866 |
+| 1D-ResNet + R-R | 0.932 | 0.950 | 0.880 |
+| Conv-BiLSTM + R-R | 0.932 | 0.864 | 0.864 |
+
+---
+
+## Explainable AI
+
+Two independent layers, so each cross-checks the other:
+
+1. **Grad-CAM** on the last Conv1D layer shows *where* in the beat the CNN focused. A deletion test
+   (`src/dashboard_data.py`, tab "XAI faithfulness") checks that hiding the highlighted region
+   really changes the prediction.
+2. **Rule-based clinical reasoning** checks the textbook PVC signs: absent P wave, widened QRS and
+   discordant T wave. On image-read beats the QRS width is judged as a **ratio to the strip's own
+   confident normal beats**, because absolute milliseconds are not reliable after digitization.
+
+When the CNN is borderline but the rules disagree, the report flags the beat for review instead of
+silently trusting one number.
+
+---
+
+## Web app (`app_pro.py`)
+
+```bash
+streamlit run app_pro.py
+```
+
+| Tab | What it shows |
+|---|---|
+| Analyze ECG | Upload an image or pick a gallery strip; beats coloured N / S / V / Uncertain, heart rate, patterns, per-beat Grad-CAM + reasons, PDF download |
+| Rhythm & HRV | R-R intervals, pNN50, Poincare plot (SD1/SD2), R-R distribution, ectopic timing |
+| How it works | The CV stage made visible: U-Net trace, grid calibration, detected R peaks |
+| Performance | Labelled numbers for raw signals vs rendered images, and the limits |
+| Evaluation lab | Interactive threshold trade-off and per-patient results on real test patients |
+| XAI faithfulness | Grad-CAM deletion test |
+| Single beat | The original single-beat PVC / Normal detector |
+
+`app.py` is the original 4-tab PVC-only interface (single beat, multi-beat strip, performance, saved reports).
 
 ---
 
 ## Project structure
+
 ```
-MP/
+.
+├── app_pro.py                    # multi-class Streamlit app (7 tabs)
+├── app.py                        # original PVC-only Streamlit app
 ├── src/
-│   ├── data_loader.py          # MIT-BIH loading (real + demo/synthetic mode)
-│   ├── ecg_image_gen.py        # signal -> ECG image renderer
-│   ├── image_to_signal.py      # CV: ECG image -> digitized signal
-│   ├── model.py                 # 1D CNN architecture
-│   ├── train.py                  # training script, saves model + metrics JSON
-│   ├── xai_explain.py           # Grad-CAM + rule-based P/QRS/T reasoning
-│   ├── predict_pipeline.py      # single-beat: image in -> explained image out
-│   └── multi_beat_pipeline.py   # multi-beat: strip in -> per-beat detection + explanation
-├── app.py                       # Streamlit web interface
-├── generate_demo_strips.py      # generates varied multi-beat demo strips
-├── generate_reasoning_demo_singles.py  # generates single-beat XAI showcase examples
-├── run_reasoning_demo.py        # runs showcase beats with known-correct R-peak alignment
-├── models/
-│   ├── pvc_cnn.keras             # trained model
-│   └── train_metrics.json        # real training metrics (for the app's dashboard)
-├── data/                          # MIT-BIH raw data + generated images (gitignored)
-├── outputs/                       # generated prediction/report images
-├── saved_reports/                 # reports saved via the app's "Save to history"
-└── requirements.txt
+│   ├── aami_dataset.py           # builds the 4-class AAMI dataset with the inter-patient split
+│   ├── train_arrhythmia.py       # trains the 4-class CNN (signal-only or signal + R-R)
+│   ├── build_image_dataset.py    # image-domain training set (rendered images of real beats)
+│   ├── arrhythmia_pipeline.py    # end-to-end image -> annotated strip pipeline
+│   ├── beat_detect.py            # R-peak detector
+│   ├── rhythm_analytics.py       # heart rate, couplets, runs, bigeminy, trigeminy
+│   ├── report_pdf.py             # PDF report
+│   ├── dash_tabs.py, dashboard_data.py   # dashboards and their precomputed data
+│   ├── robustness_ablation.py    # raw signal vs image robustness study
+│   ├── make_demo_gallery.py      # demo strips + clean-image pipeline evaluation
+│   ├── download_ds2.py           # downloads the needed MIT-BIH records
+│   ├── cv_unet/                  # U-Net trace segmentation, grid calibration, paper crop
+│   └── (original PVC pipeline)   # data_loader, ecg_image_gen, image_to_signal, model, train,
+│                                 #   xai_explain, predict_pipeline, multi_beat_pipeline
+├── models/                       # trained models, metrics JSON, benchmark and CV evaluation
+├── requirements.txt
+└── data/                         # MIT-BIH records and generated images (not in git)
 ```
 
 ---
 
 ## Setup
 
+Python 3.12 is recommended.
+
 ```bash
 pip install -r requirements.txt
 ```
 
-## Get the MIT-BIH data
-Download from PhysioNet: https://physionet.org/content/mitdb/1.0.0/
-```python
-import wfdb
-wfdb.dl_database('mitdb', 'data/mitdb', records=[
-    '100','101','106','119','200','201','203','208','210',
-    '213','215','219','221','223','233'
-])
-```
-(These 15 records were chosen for having a meaningful number of PVC ('V')
-annotations — MIT-BIH is heavily imbalanced toward Normal beats.)
+### Data
+MIT-BIH Arrhythmia Database from [PhysioNet](https://physionet.org/content/mitdb/1.0.0/). The helper
+downloads only the records used (about 2.4 MB each):
 
-## Train
+```bash
+python src/download_ds2.py --ds1          # DS1 (training) and DS2 (test) patients into data/mitdb
+```
+
+### Rebuild datasets and models (optional; trained models are already in `models/`)
+```bash
+python src/aami_dataset.py --data_dir data/mitdb --out aami_dataset.npz
+python src/train_arrhythmia.py --data aami_dataset.npz --use_rr \
+    --out models/arrhythmia_rr.keras --metrics models/arrhythmia_rr_metrics.json \
+    --confusion_png models/arrhythmia_rr_confusion.png
+python src/cv_unet/train_unet.py --bank aami_dataset.npz
+python src/build_image_dataset.py --data_dir data/mitdb --split_from aami_dataset.npz
+```
+The large `.npz` datasets are not stored in git; the commands above regenerate them.
+
+### Demo gallery and dashboard data
+```bash
+python src/make_demo_gallery.py --data_dir data/mitdb --models_dir models --out_dir data/ecg_images/gallery
+python src/dashboard_data.py              # needs models/image_domain.npz
+```
+
+### Original PVC-only pipeline
 ```bash
 python src/train.py --mode real --records 100 101 106 119 200 201 203 208 210 213 215 219 221 223 233 --epochs 25
-```
-Trains with class-weighting (handles the PVC/Normal imbalance), saves the
-model to `models/pvc_cnn.keras`, and writes real precision/recall/F1 +
-confusion matrix to `models/train_metrics.json`.
-
-## Run — single beat
-```bash
 python src/predict_pipeline.py --image path/to/beat.png --model models/pvc_cnn.keras
-```
-
-## Run — multi-beat strip
-```bash
 python src/multi_beat_pipeline.py --image path/to/strip.png --model models/pvc_cnn.keras
 ```
-
-## Run the web interface
-```bash
-streamlit run app.py
-```
-Four tabs: **Single Beat**, **Multi-Beat Strip**, **Model Performance**
-(real metrics dashboard), **Saved Reports** (browse saved results).
 
 ---
 
 ## Key design decisions
 
-- **Why image input, not raw signal?** Real-world deployment often only has
-  printed, scanned, or photographed ECG strips — not raw digital device
-  data. The CV stage makes the system deployable in that setting.
-- **Why Lead II?** Standard for continuous rhythm/arrhythmia monitoring
-  (ICU telemetry, Holter monitors). MIT-BIH itself is primarily Lead II
-  (MLII), so this matches both the training data and real clinical practice.
-- **Why 1D CNN, not LSTM/Transformer?** Beats are short, fixed-length, and
-  local-pattern-dominated (QRS shape, wave presence). A 1D CNN trains fast,
-  needs less data, and Grad-CAM is well-established on CNN features.
-- **Why Grad-CAM + rule-based reasoning, not just one?** They act as an
-  independent cross-check on each other. When the CNN's confidence is
-  genuinely uncertain (e.g. on out-of-distribution input), the rule-based
-  layer can still flag concerning features and surface a "recommend
-  clinician review" note rather than silently trusting one number.
-- **QRS-width threshold (70ms, not the textbook 120ms):** the
-  amplitude-threshold-crossing method used here measures a narrower core
-  segment than the clinical onset-to-offset convention. Recalibrated
-  empirically against real MIT-BIH data (PVC median ≈94ms vs Normal ≈36ms
-  under this specific measurement method).
-- **Multi-beat R-peak detection** uses prominence (not a fixed height
-  threshold), since a wide/tall PVC beat next to normal-sized beats would
-  otherwise push normal beats below a height cutoff. A multi-pass merge
-  step also corrects for a beat's own T-wave or a wide QRS's secondary
-  deflection being mistaken for an extra beat.
+- **Image input, not raw signal:** real-world ECGs often exist only as printouts, scans or screenshots.
+- **Lead II:** the standard lead for rhythm monitoring, and MIT-BIH is mainly MLII.
+- **1D CNN, not LSTM/Transformer:** beats are short, fixed-length and shape-driven; CNNs train fast
+  and Grad-CAM is well established on them. Benchmarked against ResNet and BiLSTM variants above.
+- **R-R interval features:** S and V beats are defined by how *early* they arrive, which a 200-sample
+  window alone cannot show. Adding R-R features raised accuracy from 0.873 to 0.924 in the benchmark.
+- **U-Net digitizer instead of colour thresholding:** the classical HSV method degrades on noise,
+  shadows and clutter; the U-Net stays above 0.99 correlation in the same tests.
+- **Inter-patient evaluation:** beats from one patient are never split across train and test.
 
 ---
 
 ## Known limitations
 
-- **Train/test split is random (beat-wise), not patient-wise.** A more
-  rigorous benchmark would split by patient, since beats from the same
-  patient can appear in both sets here.
-- **Single-beat vs multi-beat R-peak alignment differs.** Single-beat
-  classification uses a signal-derived R-peak estimate; multi-beat
-  classification must additionally detect where each beat is within the
-  strip, which can shift the effective R-peak position slightly for
-  boundary-case beats and change which rule-based criteria fire.
-- **Designed for single-lead rhythm strips**, not full 12-lead diagnostic
-  ECGs, which serve a different clinical purpose (localized diagnosis vs.
-  continuous rhythm monitoring).
-- **CV digitization is tuned for clean rendered/scanned strips.** Real
-  photographs with calibration pulses, text labels, or heavy skew can
-  introduce minor artifacts near the affected region.
+- **Weaker classes:** S (PAC-type) beats are only partly detected (recall about 35-37%) and **F
+  (fusion) beats are not reliably detected** (recall near 0%); both are rare and concentrated in a
+  few patients. PVC (V) is the strongest class. In calibrated mode the F output is ignored.
+- **Image-based accuracy is lower than raw-signal accuracy** (see the results table), and
+  image-based PVC counts can run high. No PVC burden percentage is shown for a short strip.
+- **Images are synthetic renderings** of real MIT-BIH beats; robustness on real photographs has
+  only been checked by eye (`src/cv_unet/try_on_image.py`).
+- **Grid calibration needs visible grid lines**; with only the 5 mm lines visible the heart rate can
+  come out wrong by a factor of five.
+- **Single-lead rhythm strips only** (trained on Lead II), not 12-lead diagnostic sheets.
+- **Detection covers only the beats present in the image**; it cannot see beats outside the strip.
+- The R-peak detector was tuned on five MIT-BIH records; validate it on more before quoting a number.
+- Not a medical device; outputs describe patterns of detected beats and are not diagnoses.
 
 ---
 
 ## Tech stack
 
-Python 3.12 · TensorFlow/Keras · OpenCV · SciPy · NumPy · wfdb ·
-scikit-learn · Matplotlib · Pillow · Streamlit
+Python · TensorFlow/Keras · OpenCV · SciPy · NumPy · scikit-learn · wfdb · Matplotlib · Pillow ·
+ReportLab · Streamlit

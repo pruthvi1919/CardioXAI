@@ -1,0 +1,43 @@
+{
+  "data": "SYNTHETIC test images (real MIT-BIH test beats)",
+  "n_per_condition": 60,
+  "resolution_ceiling_r": 0.9783193269266838,
+  "results": {
+    "clean": {
+      "classical_mean_r": 0.754219377332521,
+      "classical_r_gt_095": 0.6333333333333333,
+      "unet_mean_r": 0.9988470526498291,
+      "unet_r_gt_095": 1.0
+    },
+    "noisy": {
+      "classical_mean_r": 0.7868813780590503,
+      "classical_r_gt_095": 0.5333333333333333,
+      "unet_mean_r": 0.9986718710783908,
+      "unet_r_gt_095": 1.0
+    },
+    "tilted": {
+      "classical_mean_r": 0.8041289510075196,
+      "classical_r_gt_095": 0.6666666666666666,
+      "unet_mean_r": 0.9979546880310921,
+      "unet_r_gt_095": 1.0
+    },
+    "shadow": {
+      "classical_mean_r": 0.7844115653042649,
+      "classical_r_gt_095": 0.5,
+      "unet_mean_r": 0.9988208760534539,
+      "unet_r_gt_095": 1.0
+    },
+    "clutter": {
+      "classical_mean_r": 0.43303219283630473,
+      "classical_r_gt_095": 0.0,
+      "unet_mean_r": 0.9983211198046326,
+      "unet_r_gt_095": 1.0
+    },
+    "hard": {
+      "classical_mean_r": 0.4757701226661541,
+      "classical_r_gt_095": 0.03333333333333333,
+      "unet_mean_r": 0.997282759165215,
+      "unet_r_gt_095": 1.0
+    }
+  }
+}

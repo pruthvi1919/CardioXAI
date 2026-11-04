@@ -1,0 +1,129 @@
+{
+  "data_source": "REAL MIT-BIH beats, SYNTHETIC images (image domain), inter-patient",
+  "variant": "signal+rr",
+  "split_counts": {
+    "train": [
+      16614,
+      1698,
+      2604,
+      236
+    ],
+    "val": [
+      3361,
+      316,
+      1066,
+      31
+    ],
+    "test": [
+      5337,
+      653,
+      665,
+      69
+    ]
+  },
+  "class_names": [
+    "N",
+    "S",
+    "V",
+    "F"
+  ],
+  "class_weights": {
+    "N": 0.6938963150979718,
+    "S": 2.170515248886827,
+    "V": 1.7527145596083749,
+    "F": 5.822046674289223
+  },
+  "epochs_run": 18,
+  "best_epoch": 10,
+  "best_val_score": 0.8403807766528598,
+  "augmentation": true,
+  "test": {
+    "accuracy": 0.7842058298631767,
+    "macro_f1": 0.49772489598027214,
+    "report": {
+      "N": {
+        "precision": 0.9208854273416683,
+        "recall": 0.8418587221285366,
+        "f1-score": 0.8796006264682851,
+        "support": 5337.0
+      },
+      "S": {
+        "precision": 0.43018867924528303,
+        "recall": 0.34915773353751917,
+        "f1-score": 0.38546069315300086,
+        "support": 653.0
+      },
+      "V": {
+        "precision": 0.6448598130841121,
+        "recall": 0.8300751879699249,
+        "f1-score": 0.7258382642998028,
+        "support": 665.0
+      },
+      "F": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 69.0
+      },
+      "accuracy": 0.7842058298631767,
+      "macro avg": {
+        "precision": 0.49898347991776587,
+        "recall": 0.5052729109089952,
+        "f1-score": 0.49772489598027214,
+        "support": 6724.0
+      },
+      "weighted avg": {
+        "precision": 0.8364828240586836,
+        "recall": 0.7842058298631767,
+        "f1-score": 0.8073790633327655,
+        "support": 6724.0
+      }
+    },
+    "confusion_matrix": [
+      [
+        4493,
+        243,
+        216,
+        385
+      ],
+      [
+        274,
+        228,
+        85,
+        66
+      ],
+      [
+        49,
+        56,
+        552,
+        8
+      ],
+      [
+        63,
+        3,
+        3,
+        0
+      ]
+    ],
+    "pvc_sensitivity": 0.8300751879699249,
+    "pvc_ppv": 0.6448598130841121,
+    "largest_record_share_per_class": {
+      "N": {
+        "top_record": "212",
+        "share": 0.06370620198613454
+      },
+      "S": {
+        "top_record": "232",
+        "share": 0.3108728943338438
+      },
+      "V": {
+        "top_record": "200",
+        "share": 0.2
+      },
+      "F": {
+        "top_record": "213",
+        "share": 0.9420289855072463
+      }
+    }
+  }
+}

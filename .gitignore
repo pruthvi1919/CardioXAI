@@ -1,5 +1,26 @@
+# Python
 __pycache__/
 *.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+.DS_Store
+
+# Raw data and generated images (rebuild with the scripts in src/)
 data/mitdb/
 data/ecg_images/
+*.part
+
+# Large regenerable datasets (see README: Rebuild datasets and models)
+aami_dataset.npz
+image_domain.npz
+
+# Experiment tracking
+mlruns/
+mlflow.db
+
+# Auto-generated temporary app outputs
+outputs/tmp*
+
+# Local tool settings
 .streamlit/

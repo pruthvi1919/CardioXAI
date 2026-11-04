@@ -19,6 +19,13 @@ The EXPLAINABLE AI stage. Two layers of explanation, combined:
 
 Together these directly satisfy your project's XAI requirement: "explain
 how PVC was detected (absence of P wave / abnormal QRS / T wave inversion)".
+
+3. STRIP-RELATIVE QRS WIDTH (qrs_width_slope_ms, used by arrhythmia_pipeline.py):
+   A signal read back from an image is smoothed, so an absolute "QRS > 120 ms"
+   rule does not work on it (the old +-60 ms rule can never exceed ~114 ms).
+   Instead the QRS is measured the same way on every beat of the strip and
+   compared with the strip's own confident normal beats. Image effects hit all
+   beats equally, so the RATIO is meaningful even though the absolute ms is not.
 """
 
 import numpy as np
@@ -161,6 +168,49 @@ def clinical_reasoning(signal, r_peak_idx, sampling_rate=360,
         "t_wave_opposite": bool(t_opposite),
         "reasons": reasons,
     }
+
+
+# ---------- 2b. QRS width for strip-relative comparison ----------
+
+# Cut-offs for (beat QRS width) / (median QRS width of the strip's confident normal beats).
+# Chosen on DS1 training + validation patients only (not on the DS2 test patients):
+# at 1.30 about 76 % of true PVCs and 3-4 % of true normal beats are flagged as wider.
+QRS_WIDE_RATIO = 1.30
+QRS_SIMILAR_RATIO = 1.15
+
+
+def qrs_width_slope_ms(signal, r_peak_idx, sampling_rate=360, frac=0.10, smooth=2,
+                       core_ms=50, search_ms=(140, 160), hold_ms=10):
+    """QRS width (ms) as the steep-slope region around the R peak.
+
+    1. light smoothing, then |slope| of the beat
+    2. steep = |slope| >= frac * (max |slope| within +-core_ms of R)
+    3. start from the first/last steep sample near R (so a flat-topped R never gives 0)
+       and extend outward while any slope in the next hold_ms is still steep
+
+    The absolute value is NOT a clinical QRS duration on image-read beats (smoothing and
+    stair-steps inflate it; normal beats read ~140-160 ms). Use it only as a ratio against
+    other beats measured the same way in the same strip.
+    """
+    x = gaussian_filter1d(np.asarray(signal, dtype=float).ravel(), smooth)
+    d = np.abs(np.gradient(x))
+    n = len(x)
+    r = int(np.clip(r_peak_idx, 0, n - 1))
+    lo = max(0, r - int(search_ms[0] / 1000 * sampling_rate))
+    hi = min(n - 1, r + int(search_ms[1] / 1000 * sampling_rate))
+    c0 = max(lo, r - int(core_ms / 1000 * sampling_rate))
+    c1 = min(hi, r + int(core_ms / 1000 * sampling_rate))
+    th = frac * float(d[c0:c1 + 1].max())
+    if th <= 0:
+        return 0.0
+    steep = np.where(d[c0:c1 + 1] >= th)[0] + c0
+    left, right = int(steep[0]), int(steep[-1])
+    hold = max(1, int(hold_ms / 1000 * sampling_rate))
+    while left - 1 >= lo and np.any(d[max(lo, left - hold):left] >= th):
+        left -= 1
+    while right + 1 <= hi and np.any(d[right + 1:min(hi, right + hold) + 1] >= th):
+        right += 1
+    return float((right - left) / sampling_rate * 1000)
 
 
 def explain_prediction(model, signal, r_peak_idx=None, sampling_rate=360):
