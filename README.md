@@ -226,5 +226,4 @@ python src/multi_beat_pipeline.py --image path/to/strip.png --model models/pvc_c
 
 ## Tech stack
 
-Python · TensorFlow/Keras · OpenCV · SciPy · NumPy · scikit-learn · wfdb · Matplotlib · Pillow ·
-ReportLab · Streamlit
+Python · TensorFlow/Keras · OpenCV · SciPy · NumPy · scikit-learn · wfdb · Matplotlib · Streamlit
