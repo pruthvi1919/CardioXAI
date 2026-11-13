@@ -224,6 +224,14 @@ python src/multi_beat_pipeline.py --image path/to/strip.png --model models/pvc_c
 
 ---
 
-## Tech stack
+---
 
-Python · TensorFlow/Keras · OpenCV · SciPy · NumPy · scikit-learn · wfdb · Matplotlib · Streamlit
+## References
+
+- Moody GB, Mark RG. The impact of the MIT-BIH Arrhythmia Database. *IEEE Eng in Med and Biol* 20(3):45-50 (2001).
+- Goldberger AL et al. PhysioBank, PhysioToolkit, and PhysioNet. *Circulation* 101(23):e215-e220 (2000).
+- de Chazal P, O'Dwyer M, Reilly RB. Automatic classification of heartbeats using ECG morphology and heartbeat interval features. *IEEE Trans Biomed Eng* 51(7):1196-1206 (2004). (inter-patient DS1/DS2 split)
+- Selvaraju RR et al. Grad-CAM: Visual explanations from deep networks via gradient-based localization. *ICCV* (2017).
+- Ronneberger O, Fischer P, Brox T. U-Net: Convolutional networks for biomedical image segmentation. *MICCAI* (2015).
+
+
