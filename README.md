@@ -14,7 +14,6 @@ multi-class arrhythmia analysis tool. The original PVC-only pipeline is still in
 
 ## Pipeline
 
-![Original PVC pipeline](pvc_pipeline_professional.png)
 
 The current multi-class pipeline (`src/arrhythmia_pipeline.py`, used by `app_pro.py`):
 
