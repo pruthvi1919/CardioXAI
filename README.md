@@ -15,8 +15,6 @@ multi-class arrhythmia analysis tool. The original PVC-only pipeline is still in
 ## Pipeline
 
 
-The current multi-class pipeline (`src/arrhythmia_pipeline.py`, used by `app_pro.py`):
-
 ```
 ECG image
   -> paper auto-crop + grid calibration (pixels per second)       cv_unet/paper_crop.py, grid_calibration.py
