@@ -12,6 +12,19 @@ multi-class arrhythmia analysis tool. The original PVC-only pipeline is still in
 
 ---
 
+## Architecture
+
+### Stage 1: Computer vision (ECG image to signal)
+![Stage 1: ECG image to signal](docs/images/stage1_cv_digitization.png)
+
+### Stage 2: 1D-CNN beat classification
+![Stage 2: beat classification](docs/images/stage2_cnn_classifier.png)
+
+### Stage 3: Explainable AI
+![Stage 3: explainable AI](docs/images/stage3_explainable_ai.png)
+
+---
+
 ## Pipeline
 
 
